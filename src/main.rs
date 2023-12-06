@@ -1,12 +1,37 @@
+mod headers;
+
 use aws_lambda_events::apigw::{
     ApiGatewayV2httpRequest, ApiGatewayV2httpRequestContext,
-    ApiGatewayV2httpRequestContextHttpDescription, ApiGatewayV2httpResponse,
+    ApiGatewayV2httpRequestContextHttpDescription
 };
+use aws_lambda_events::encodings::Body;
 use base64::decode;
 use chrono::Utc;
 use clap::Parser as _;
 use futures::stream::TryStreamExt as _;
+use hyper::HeaderMap;
+use serde::{Deserialize, Serialize};
+use crate::headers::deserialize_headers;
+use crate::headers::serialize_multi_value_headers;
+use crate::headers::serialize_headers;
 
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ApiGatewayV2httpResponse {
+    pub status_code: i64,
+    #[serde(deserialize_with = "deserialize_headers", default)]
+    #[serde(serialize_with = "serialize_headers")]
+    pub headers: HeaderMap,
+    #[serde(deserialize_with = "deserialize_headers", default)]
+    #[serde(serialize_with = "serialize_multi_value_headers")]
+    pub multi_value_headers: HeaderMap,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub body: Option<Body>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub is_base64_encoded: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cookies: Option<Vec<String>>,
+}
 #[derive(Debug, clap::Parser)]
 struct Opt {
     /// Bind address
